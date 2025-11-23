@@ -1,0 +1,215 @@
+let board = [];
+let currentPlayer = 1;
+let selectedSquare = null;
+const boardElement = document.getElementById('board');
+const statusElement = document.getElementById('status');
+
+// Initialize board
+function initBoard() {
+    board = Array(8).fill().map(() => Array(8).fill(0));
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            if ((row + col) % 2 === 1) {
+                if (row < 3) board[row][col] = 1;
+                else if (row > 4) board[row][col] = 2;
+            }
+        }
+    }
+    renderBoard();
+}
+
+// Render board
+function renderBoard() {
+    boardElement.innerHTML = '';
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const square = document.createElement('div');
+            square.className = 'square ' + ((row + col) % 2 === 0 ? 'white' : 'black');
+            square.dataset.row = row;
+            square.dataset.col = col;
+            if (board[row][col] !== 0) {
+                square.textContent = board[row][col] === 1 ? '🔴' : '⚫';
+                square.classList.add('piece');
+            }
+            square.addEventListener('click', handleClick);
+            boardElement.appendChild(square);
+        }
+    }
+}
+
+// Handle clicks
+function handleClick(e) {
+    const row = parseInt(e.target.dataset.row);
+    const col = parseInt(e.target.dataset.col);
+    if (selectedSquare) {
+        if (isValidMove(selectedSquare, {row, col})) {
+            movePiece(selectedSquare, {row, col});
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            statusElement.textContent = currentPlayer === 1 ? "Red's turn" : "Black's turn";
+            checkWin();
+        }
+        selectedSquare = null;
+        renderBoard();
+    } else if (board[row][col] === currentPlayer) {
+        selectedSquare = {row, col};
+        e.target.classList.add('selected');
+    }
+}
+
+// Basic move validation (add jumps later)
+function isValidMove(from, to) {
+    const dr = to.row - from.row;
+    const dc = to.col - from.col;
+    if (Math.abs(dr) !== 1 || Math.abs(dc) !== 1) return false;
+    if (board[to.row][to.col] !== 0) return false;
+    return true;
+}
+
+// Move piece
+function movePiece(from, to) {
+    board[to.row][to.col] = board[from.row][from.col];
+    board[from.row][from.col] = 0;
+    if (to.row === 0 && board[to.row][to.col] === 2) board[to.row][to.col] = 4; // Black king
+    if (to.row === 7 && board[to.row][to.col] === 1) board[to.row][to.col] = 3; // Red king
+}
+
+// Check win
+function checkWin() {
+    let red = 0, black = 0;
+    for (let r of board) for (let c of r) {
+        if (c === 1 || c === 3) red++;
+        if (c === 2 || c === 4) black++;
+    }
+    if (red === 0) statusElement.textContent = "Black wins!";
+    else if (black === 0) statusElement.textContent = "Red wins!";
+}
+
+// Auth functions
+function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    fetch('login.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `action=login&email=${email}&password=${password}`
+    }).then(res => res.text()).then(data => {
+        document.getElementById('authMessage').textContent = data;
+        if (data === 'Login successful') showGame();
+    });
+}
+function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    fetch('login.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `action=login&email=${email}&password=${password}`
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.text();
+    })
+    .then(data => {
+        data = data.trim();  // Remove any extra whitespace/newlines
+        console.log('Login response (trimmed):', '"' + data + '"');  // Debug: Check exact string
+        document.getElementById('authMessage').textContent = data;
+        if (data === 'Login successful') {
+            console.log('Calling showGame()');  // Debug: Confirm it's reached
+            showGame();
+        } else {
+            console.log('Response did not match "Login successful"');  // Debug
+        }
+    })
+    .catch(error => {
+        console.error('Login error:', error);
+        document.getElementById('authMessage').textContent = 'Login failed: ' + error.message;
+    });
+}
+
+function signup() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    fetch('login.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `action=signup&email=${email}&password=${password}`
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.text();
+    })
+    .then(data => {
+        data = data.trim();  // Trim here too
+        console.log('Signup response (trimmed):', '"' + data + '"');  // Debug
+        document.getElementById('authMessage').textContent = data;
+        if (data === 'Signup successful') {
+            console.log('Calling showGame()');  // Debug
+            showGame();
+        } else {
+            console.log('Response did not match "Signup successful"');  // Debug
+        }
+    })
+    .catch(error => {
+        console.error('Signup error:', error);
+        document.getElementById('authMessage').textContent = 'Signup failed: ' + error.message;
+    });
+}
+function showAuth() {
+    document.getElementById('auth').style.display = 'block';
+    document.getElementById('game').style.display = 'none';
+}
+
+function showGame() {
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    initBoard();
+}
+
+// Save/Load
+function saveGame() {
+    fetch('save_game.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({board, currentPlayer})
+    }).then(res => res.text()).then(alert);
+}
+
+function logout() {
+    fetch('logout.php')
+        .then(res => res.text())
+        .then(data => {
+            console.log('Logout response:', data);
+            showAuth();  // Switch to login immediately
+        })
+        .catch(error => console.error('Logout error:', error));
+}
+
+function loadGame() {
+    fetch('load_game.php')
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+            return res.text();  // Change to text
+        })
+        .then(data => {
+            console.log('Load response:', data);  // Debug
+            if (data === 'No saved game' || data === 'Not logged in') {
+                alert(data);
+                return;
+            }
+            const parsed = JSON.parse(data);  // Parse only if it's JSON
+            board = JSON.parse(parsed.board);
+            currentPlayer = parsed.current_player;
+            renderBoard();
+            statusElement.textContent = currentPlayer === 1 ? "Red's turn" : "Black's turn";
+        })
+        .catch(error => {
+            console.error('Load error:', error);
+            alert('Load failed: ' + error.message);
+        });
+}
+
+// Check if logged in on load
+fetch('check_session.php').then(res => res.text()).then(data => {
+    if (data === 'logged_in') showGame();
+    else showAuth();
+});

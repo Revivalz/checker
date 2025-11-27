@@ -6,7 +6,7 @@ const statusElement = document.getElementById('status');
 
 // Initialize board
 function initBoard() {
-    board = Array(8).fill().map(() => Array(8).fill(0));
+    board = Array(8).fill(null).map(() => Array(8).fill(0));
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             if ((row + col) % 2 === 1) {
@@ -15,8 +15,10 @@ function initBoard() {
             }
         }
     }
+    console.log('Board initialized:', board);
     renderBoard();
 }
+
 
 // Render board
 function renderBoard() {
@@ -158,21 +160,45 @@ function showAuth() {
     document.getElementById('auth').style.display = 'block';
     document.getElementById('game').style.display = 'none';
 }
-
 function showGame() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('game').style.display = 'block';
     initBoard();
+    console.log('Board after initialization:', board);
 }
+
+
 
 // Save/Load
 function saveGame() {
+    console.log('saveGame called. Current board:', board);
+
+    // Validate board is a proper 8x8 array
+    if (!Array.isArray(board) || board.length !== 8 || !Array.isArray(board[0]) || board[0].length !== 8) {
+        alert('Cannot save: Board is not properly initialized or invalid.');
+        console.error('Invalid board data during save:', board);
+        return;
+    }
+
     fetch('save_game.php', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({board, currentPlayer})
-    }).then(res => res.text()).then(alert);
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ board: board, currentPlayer: currentPlayer })
+    })
+    .then(res => res.text())
+    .then(data => {
+        console.log('Save response:', data);
+        alert(data);
+    })
+    .catch(error => {
+        console.error('Save failed:', error);
+        alert('Save failed: ' + error.message);
+    });
 }
+
+  
+
+
 
 function logout() {
     fetch('logout.php')
@@ -184,29 +210,56 @@ function logout() {
         .catch(error => console.error('Logout error:', error));
 }
 
-function loadGame() {
+  function loadGame() {
     fetch('load_game.php')
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-            return res.text();  // Change to text
-        })
-        .then(data => {
-            console.log('Load response:', data);  // Debug
-            if (data === 'No saved game' || data === 'Not logged in') {
-                alert(data);
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.text();  // get raw text first!
+    })
+    .then(data => {
+        data = data.trim();
+        console.log('Load response:', data);
+
+        // Handle known string responses before JSON parsing
+        if (data === 'No saved game') {
+            alert('No saved game found.');
+            return;
+        }
+        if (data === 'Not logged in') {
+            alert('Please log in first.');
+            showAuth();
+            return;
+        }
+
+        // If not known string, try JSON parsing
+        try {
+            const parsed = JSON.parse(data);
+            const loadedBoard = JSON.parse(parsed.board);
+
+            if (!Array.isArray(loadedBoard) || loadedBoard.length !== 8 || !Array.isArray(loadedBoard[0]) || loadedBoard[0].length !== 8) {
+                alert('Saved board is invalid. Please start a new game and save.');
                 return;
             }
-            const parsed = JSON.parse(data);  // Parse only if it's JSON
-            board = JSON.parse(parsed.board);
-            currentPlayer = parsed.current_player;
+
+            board = loadedBoard;
+            currentPlayer = parseInt(parsed.current_player);
             renderBoard();
             statusElement.textContent = currentPlayer === 1 ? "Red's turn" : "Black's turn";
-        })
-        .catch(error => {
-            console.error('Load error:', error);
-            alert('Load failed: ' + error.message);
-        });
+            alert('Game loaded!');
+        } catch (e) {
+            console.error('Error parsing loaded data:', e);
+            alert('Failed to load game — data corrupted.');
+        }
+    })
+    .catch(error => {
+        console.error('Load error:', error);
+        alert('Failed to load: ' + error.message);
+    });
 }
+
+  
+
+
 
 // Check if logged in on load
 fetch('check_session.php').then(res => res.text()).then(data => {

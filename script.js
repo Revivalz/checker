@@ -26,11 +26,16 @@ function renderBoard() {
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
-            square.className = 'square ' + ((row + col) % 2 === 0 ? 'white' : 'black');
+            const isLight = (row + col) % 2 === 0;
+            square.className = 'square ' + (isLight ? 'light' : 'dark');
+            console.log(`Square (${row},${col}): isLight=${isLight}, class=${square.className}`);  // Debug
             square.dataset.row = row;
             square.dataset.col = col;
             if (board[row][col] !== 0) {
-                square.textContent = board[row][col] === 1 ? '🔴' : '⚫';
+                if (board[row][col] === 1) square.textContent = '🔴';  // Red
+                else if (board[row][col] === 2) square.textContent = '⚫';  // Black
+                else if (board[row][col] === 3) square.textContent = '👑🔴';  // Red King
+                else if (board[row][col] === 4) square.textContent = '👑⚫';  // Black King
                 square.classList.add('piece');
             }
             square.addEventListener('click', handleClick);
@@ -38,6 +43,8 @@ function renderBoard() {
         }
     }
 }
+
+
 
 // Handle clicks
 function handleClick(e) {
@@ -56,7 +63,7 @@ function handleClick(e) {
             const wasJump = Math.abs(dr) === 2 && Math.abs(dc) === 2;
             if (wasJump && canJumpAgain({row, col})) {
                 console.log('More jumps available, keeping piece selected');
-                selectedSquare = {row, col};  // Keep selected for another jump
+                selectedSquare = {row, col};
             } else {
                 console.log('No more jumps, switching turns');
                 selectedSquare = null;
@@ -68,12 +75,19 @@ function handleClick(e) {
             console.log('Move invalid');
         }
         renderBoard();
-    } else if (board[row][col] === currentPlayer) {
-        console.log('Selecting piece');
-        selectedSquare = {row, col};
-        e.target.classList.add('selected');
+    } else {
+        // Allow selecting own pieces or kings
+        const piece = board[row][col];
+        if ((currentPlayer === 1 && (piece === 1 || piece === 3)) || (currentPlayer === 2 && (piece === 2 || piece === 4))) {
+            console.log('Selecting piece');
+            selectedSquare = {row, col};
+            e.target.classList.add('selected');
+        } else {
+            console.log('Invalid selection: not your piece or king');
+        }
     }
 }
+
 
 
 // Basic move validation (add jumps later)
@@ -90,11 +104,13 @@ function isValidMove(from, to) {
     }
 
     if (piece === 3 || piece === 4) {  // Kings
+        // Check for 1-step diagonal moves
         if (Math.abs(dr) === 1 && Math.abs(dc) === 1) {
-            console.log('Valid: King normal');
+            console.log('Valid: King 1-step move');
             return true;
         }
-        if (Math.abs(dr) === 2 && Math.abs(dc) === 2) {
+        // Check for jumps (2-step diagonal with enemy in middle)
+        else if (Math.abs(dr) === 2 && Math.abs(dc) === 2) {
             const midRow = (from.row + to.row) / 2;
             const midCol = (from.col + to.col) / 2;
             const midPiece = board[midRow][midCol];
@@ -103,6 +119,33 @@ function isValidMove(from, to) {
                 console.log('Valid: King jump');
                 return true;
             }
+        }
+        // Then check for long moves (3+ step diagonal, path must be completely clear)
+        else if (Math.abs(dr) === Math.abs(dc) && dr !== 0 && Math.abs(dr) > 2) {
+            console.log('King long move: Diagonal check passed');
+            const stepRow = dr > 0 ? 1 : -1;
+            const stepCol = dc > 0 ? 1 : -1;
+            let currentRow = from.row + stepRow;
+            let currentCol = from.col + stepCol;
+            console.log(`Checking path from (${currentRow},${currentCol}) to (${to.row},${to.col})`);
+            // Check path is clear
+            while (currentRow !== to.row && currentCol !== to.col) {
+                console.log(`Checking square (${currentRow},${currentCol}): ${board[currentRow][currentCol]}`);
+                if (board[currentRow][currentCol] !== 0) {
+                    console.log('Invalid: Path blocked');
+                    return false;
+                }
+                currentRow += stepRow;
+                currentCol += stepCol;
+                if (currentRow < 0 || currentRow > 7 || currentCol < 0 || currentCol > 7) {
+                    console.log('Invalid: Out of bounds');
+                    return false;
+                }
+            }
+            console.log('Valid: King long move');
+            return true;
+        } else {
+            console.log('Invalid: King move not diagonal or too short');
         }
     } else {  // Regular pieces
         const direction = piece === 1 ? 1 : -1;  // Red down (+1), Black up (-1)
@@ -126,6 +169,11 @@ function isValidMove(from, to) {
     console.log('Invalid move');
     return false;
 }
+
+
+
+
+
 
 
 function canJumpAgain(pos) {
@@ -160,31 +208,7 @@ function movePiece(from, to) {
     const dc = to.col - from.col;
     const piece = board[from.row][from.col];
 
-    // Move the piece
-    board[to.row][to.col] = piece;
-    board[from.row][from.col] = 0;
-
-    // If it's a jump, remove the captured piece
-    if (Math.abs(dr) === 2 && Math.abs(dc) === 2) {
-        const midRow = (from.row + to.row) / 2;
-        const midCol = (from.col + to.col) / 2;
-        board[midRow][midCol] = 0;
-    }
-
-    // King promotion
-    if (to.row === 7 && piece === 1) board[to.row][to.col] = 3;  // Red king at bottom
-    if (to.row === 0 && piece === 2) board[to.row][to.col] = 4;  // Black king at top
-
-    renderBoard();
-}
-
-
-
-// Move piece
-function movePiece(from, to) {
-    const dr = to.row - from.row;
-    const dc = to.col - from.col;
-    const piece = board[from.row][from.col];
+    console.log(`Moving piece ${piece} from (${from.row},${from.col}) to (${to.row},${to.col})`);
 
     // Move the piece
     board[to.row][to.col] = piece;
@@ -195,12 +219,23 @@ function movePiece(from, to) {
         const midRow = (from.row + to.row) / 2;
         const midCol = (from.col + to.col) / 2;
         board[midRow][midCol] = 0;
+        console.log('Captured piece at mid position');
     }
 
     // King promotion
-    if (to.row === 7 && piece === 1) board[to.row][to.col] = 3;  // Red king at bottom
-    if (to.row === 0 && piece === 2) board[to.row][to.col] = 4;  // Black king at top
+    console.log(`Checking promotion: to.row=${to.row}, piece=${piece}`);
+    if (to.row === 7 && piece === 1) {
+        board[to.row][to.col] = 3;
+        console.log('Promoted to Red King (3)');
+    } else if (to.row === 0 && piece === 2) {
+        board[to.row][to.col] = 4;
+        console.log('Promoted to Black King (4)');
+    } else {
+        console.log('No promotion');
+    }
 
+    console.log(`Board after move: position (${to.row},${to.col}) is now ${board[to.row][to.col]}`);
+    console.log('Full board after move:', board);
     renderBoard();
 }
 
@@ -217,18 +252,6 @@ function checkWin() {
 }
 
 // Auth functions
-function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    fetch('login.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `action=login&email=${email}&password=${password}`
-    }).then(res => res.text()).then(data => {
-        document.getElementById('authMessage').textContent = data;
-        if (data === 'Login successful') showGame();
-    });
-}
 function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -290,30 +313,32 @@ function showAuth() {
     document.getElementById('auth').style.display = 'block';
     document.getElementById('game').style.display = 'none';
 }
-function showGame() {
+function showGame(skipInit = false) {
+    console.log('showGame called, skipInit:', skipInit);
     document.getElementById('auth').style.display = 'none';
     document.getElementById('game').style.display = 'block';
-    initBoard();
-    console.log('Board after initialization:', board);
+    if (!skipInit) {
+        initBoard();
+        console.log('Board after init:', board);
+    }
 }
 
 
 
 // Save/Load
 function saveGame() {
-    console.log('saveGame called. Current board:', board);
+    console.log('saveGame called. Board before save:', board);
 
-    // Validate board is a proper 8x8 array
-    if (!Array.isArray(board) || board.length !== 8 || !Array.isArray(board[0]) || board[0].length !== 8) {
-        alert('Cannot save: Board is not properly initialized or invalid.');
-        console.error('Invalid board data during save:', board);
-        return;
+    // Ensure board is initialized
+    if (!Array.isArray(board) || board.length !== 8) {
+        console.log('Board not initialized, calling initBoard');
+        initBoard();
     }
 
     fetch('save_game.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ board: board, currentPlayer: currentPlayer })
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({board, currentPlayer})
     })
     .then(res => res.text())
     .then(data => {
@@ -321,7 +346,6 @@ function saveGame() {
         alert(data);
     })
     .catch(error => {
-        console.error('Save failed:', error);
         alert('Save failed: ' + error.message);
     });
 }
@@ -340,52 +364,62 @@ function logout() {
         .catch(error => console.error('Logout error:', error));
 }
 
-  function loadGame() {
-    fetch('load_game.php')
-    .then(res => {
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        return res.text();  // get raw text first!
-    })
-    .then(data => {
-        data = data.trim();
-        console.log('Load response:', data);
+function loadGame() {
+    const selectedId = localStorage.getItem('selectedGameId');
+    const url = selectedId ? `load_game.php?id=${selectedId}` : 'load_game.php';
+    localStorage.removeItem('selectedGameId');
+    console.log('Loading game, selectedId:', selectedId, 'URL:', url);
 
-        // Handle known string responses before JSON parsing
-        if (data === 'No saved game') {
-            alert('No saved game found.');
-            return;
-        }
-        if (data === 'Not logged in') {
-            alert('Please log in first.');
-            showAuth();
-            return;
-        }
-
-        // If not known string, try JSON parsing
-        try {
-            const parsed = JSON.parse(data);
-            const loadedBoard = JSON.parse(parsed.board);
-
-            if (!Array.isArray(loadedBoard) || loadedBoard.length !== 8 || !Array.isArray(loadedBoard[0]) || loadedBoard[0].length !== 8) {
-                alert('Saved board is invalid. Please start a new game and save.');
+    fetch(url)
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            return res.text();
+        })
+        .then(data => {
+            console.log('Raw load response:', data);
+            data = data.trim();
+            if (data === 'No saved game') {
+                alert('No saved game found.');
+                showGame();  // Fallback to new game
                 return;
             }
-
-            board = loadedBoard;
-            currentPlayer = parseInt(parsed.current_player);
-            renderBoard();
-            statusElement.textContent = currentPlayer === 1 ? "Red's turn" : "Black's turn";
-            alert('Game loaded!');
-        } catch (e) {
-            console.error('Error parsing loaded data:', e);
-            alert('Failed to load game — data corrupted.');
-        }
-    })
-    .catch(error => {
-        console.error('Load error:', error);
-        alert('Failed to load: ' + error.message);
-    });
+            if (data === 'Not logged in') {
+                alert('Please log in first.');
+                showAuth();
+                return;
+            }
+            try {
+                const parsed = JSON.parse(data);
+                console.log('Parsed data:', parsed);
+                const loadedBoard = JSON.parse(parsed.board);
+                console.log('Loaded board:', loadedBoard);
+                if (!Array.isArray(loadedBoard) || loadedBoard.length !== 8 || !Array.isArray(loadedBoard[0]) || loadedBoard[0].length !== 8) {
+                    alert('Saved board is invalid. Loading fresh game.');
+                    showGame();  // Fresh game
+                    return;
+                }
+                // Show game UI without initializing
+                showGame(true);  // Skip init
+                board = loadedBoard;
+                currentPlayer = parseInt(parsed.current_player);
+                renderBoard();
+                statusElement.textContent = currentPlayer === 1 ? "Red's turn" : "Black's turn";
+                alert('Game loaded!');
+            } catch (e) {
+                console.error('Error parsing loaded data:', e);
+                alert('Failed to load game. Data corrupted.');
+                showGame();  // Fallback
+            }
+        })
+        .catch(error => {
+            console.error('Load error:', error);
+            alert('Load failed: ' + error.message);
+        });
 }
+
+
+
+
 
   
 
@@ -393,6 +427,13 @@ function logout() {
 
 // Check if logged in on load
 fetch('check_session.php').then(res => res.text()).then(data => {
-    if (data === 'logged_in') showGame();
-    else showAuth();
+    if (data === 'logged_in') {
+        if (localStorage.getItem('selectedGameId')) {
+            loadGame();  // Load the selected game
+        } else {
+            showGame();  // New game
+        }
+    } else {
+        showAuth();
+    }
 });

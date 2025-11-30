@@ -1,7 +1,168 @@
-#board { display: grid; grid-template-columns: repeat(8, 50px); grid-template-rows: repeat(8, 50px); margin: 20px auto; width: 400px; }
-.square { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; }
-.black { background-color: #8B4513; }
-.white { background-color: #F5DEB3; }
-.piece { cursor: pointer; }
-.selected { background-color: yellow; }
-#auth { text-align: center; margin: 50px; }
+ /* General Styles */
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #423e38; /* Dark brown/grey background */
+        color: #ffffff; /* White text */
+        font-weight: bold; /* Bold text */
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    /* Login Page Styles */
+    #auth {
+        background-color: #332f2a; /* Dark brown container */
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        width: 300px;
+        text-align: center;
+        border: 3px solid #333; /* Thicker, darker border for contrast */
+        color: #ffffff; /* White text */
+        font-weight: bold; /* Bold text */
+    }
+
+    #auth h2 {
+        color: #ffffff; /* White heading */
+        font-weight: bold; /* Bold */
+        margin-bottom: 20px;
+    }
+
+    #auth input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 2px solid #494949;
+        border-radius: 4px;
+        background-color: #332f2a; /* Match container */
+        color: #ffffff; /* White text */
+        font-weight: bold; /* Bold */
+    }
+
+    #auth input::placeholder {
+        color: #cccccc; /* Light grey placeholder */
+    }
+
+    #auth button {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #4caf50; /* Green button */
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold; /* Bold */
+    }
+
+    #auth button:hover {
+        background-color: #45a049; /* Darker green on hover */
+    }
+
+    #authMessage {
+        color: #ff6b6b; /* Light red for errors */
+        margin-top: 10px;
+        font-weight: bold; /* Bold */
+    }
+
+    /* Game Page Styles */
+    #game {
+        background-color: #332f2a; /* Dark brown */
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border: 3px solid #333; /* Thicker, darker border for contrast */
+        color: #ffffff; /* White text */
+        font-weight: bold; /* Bold */
+    }
+
+    #game h1 {
+        color: #ffffff; /* White heading */
+        font-weight: bold; /* Bold */
+        margin-bottom: 20px;
+    }
+
+    /* Checkers Board */
+    #board {
+        display: grid;
+        grid-template-columns: repeat(8, 50px);
+        grid-template-rows: repeat(8, 50px);
+        margin: 20px auto;
+        border: 5px solid #000; /* Very dark, thick border for high contrast */
+        width: 400px;
+        height: 400px;
+        background-color: #333; /* Dark background for board edge */
+    }
+
+    .square {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        cursor: pointer;
+        border: 1px solid #494949; /* Darker borders for squares */
+    }
+
+    /* Checkerboard Pattern Classes */
+    .square.light {
+        background-color: #dfccb3; /* Light brown */
+    }
+
+    .square.dark {
+        background-color: #8d7148fb; /* Dark brown */
+    }
+
+    .piece {
+        cursor: pointer;
+    }
+
+    .selected {
+        background-color: #4caf50 !important; /* Green highlight for selected piece */
+        border: 2px solid #388e3c;
+    }
+
+    /* Game Controls */
+    #status {
+        margin: 20px 0;
+        font-size: 18px;
+        color: #ffffff; /* White text */
+        font-weight: bold; /* Bold */
+    }
+
+    button {
+        padding: 10px 20px;
+        margin: 10px;
+        background-color: #4caf50; /* Green buttons */
+        color: white; /* White text */
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold; /* Bold */
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 600px) {
+        #board {
+            width: 300px;
+            height: 300px;
+            grid-template-columns: repeat(8, 37.5px);
+            grid-template-rows: repeat(8, 37.5px);
+        }
+        .square {
+            width: 37.5px;
+            height: 37.5px;
+            font-size: 24px;
+        }
+    }
